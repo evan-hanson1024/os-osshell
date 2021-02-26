@@ -88,6 +88,8 @@ int main (int argc, char **argv)
 
     std::string current_command_string;
     const char* current_command;
+    //printf("osshell> ");
+	
     bool exists = false;
     std::filesystem::path orig_path;
     std::string path_to_command_string;
@@ -111,6 +113,7 @@ int main (int argc, char **argv)
                 if (std::filesystem::exists(current_command)) {
                     std::filesystem::current_path(orig_path);
                     path_to_command_string = os_path_list[i] + std::string("/") + current_command_string;
+
                     path_to_command = path_to_command_string.c_str();
                     //std::cout << "Current file path is: " << std::filesystem::current_path();
                     exists = true;
@@ -236,7 +239,6 @@ void vectorOfStringsToArrayOfCharArrays(std::vector<std::string>& list, char ***
 */
 void freeArrayOfCharArrays(char **array, size_t array_length)
 {
-
     int i;
     for (i = 0; i < array_length; i++)
     {
