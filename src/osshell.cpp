@@ -5,6 +5,8 @@
 #include <sstream>
 #include <vector>
 #include <unistd.h>
+#include <filesystem>
+#include <sys/wait.h>
 
 void splitString(std::string text, char d, std::vector<std::string>& result);
 void vectorOfStringsToArrayOfCharArrays(std::vector<std::string>& list, char ***result);
@@ -46,7 +48,6 @@ int main (int argc, char **argv)
     //   If yes, execute it
     //   If no, print error statement: "<command_name>: Error command not found" (do include newline)
 
-
     /************************************************************************************
      *   Example code - remove in actual program                                        *
      ************************************************************************************/
@@ -83,6 +84,70 @@ int main (int argc, char **argv)
      *   End example code                                                               *
      ************************************************************************************/
 
+    //printf("osshell> ");
+
+    std::string current_command_string;
+    const char* current_command;
+    bool exists = false;
+    std::filesystem::path orig_path;
+    std::string path_to_command_string;
+    const char* path_to_command;
+
+
+    while (true) {
+        exists = false;
+        std::cout << "osshell> ";
+        std::getline(std::cin, current_command_string);
+
+        if(current_command_string == std::string("exit")) {
+            exit(0);
+        }
+
+        if (!current_command_string.empty()) {
+            orig_path = std::filesystem::current_path();
+            current_command = current_command_string.c_str();
+            for (i = 0; i < os_path_list.size(); i++) {
+                std::filesystem::current_path(os_path_list[i]);
+                if (std::filesystem::exists(current_command)) {
+                    std::filesystem::current_path(orig_path);
+                    path_to_command_string = os_path_list[i] + std::string("/") + current_command_string;
+                    path_to_command = path_to_command_string.c_str();
+                    //std::cout << "Current file path is: " << std::filesystem::current_path();
+                    exists = true;
+                    char* argv[2];
+                    argv[0] = (char*)current_command;
+                    argv[1] = NULL;
+                    int pid = fork();
+                    if (pid == 0) {
+                        execv(path_to_command, argv);
+                    }
+                    int status;
+                    waitpid(pid, &status, 0);
+                    break;
+                } else {
+                    std::filesystem::current_path(orig_path);
+                    //try next path
+                }
+            }
+
+            if (exists == false) {
+                printf("%s: Error command not found\n", current_command);
+            }
+        }
+    }
+
+    /*
+    try {
+        int output = system("date");
+        if (output == 0) {
+            std::cout << std::to_string(output) << "\n";
+        } else {
+            throw "";
+        }
+    } catch(...) {
+        printf("Error command not found\n");
+    }
+    */
 
     return 0;
 }
@@ -171,6 +236,7 @@ void vectorOfStringsToArrayOfCharArrays(std::vector<std::string>& list, char ***
 */
 void freeArrayOfCharArrays(char **array, size_t array_length)
 {
+
     int i;
     for (i = 0; i < array_length; i++)
     {
