@@ -5,6 +5,8 @@
 #include <sstream>
 #include <vector>
 #include <unistd.h>
+#include <filesystem>
+#include <sys/wait.h>
 
 void allocateArrayOfCharArrays(char ***array_ptr, size_t array_length, size_t item_size);
 void freeArrayOfCharArrays(char **array, size_t array_length);
@@ -48,6 +50,72 @@ int main (int argc, char **argv)
     //   If yes, execute it
     //   If no, print error statement: "<command_name>: Error command not found" (do include newline)
 
+    //printf("osshell> ");
+
+    std::string current_command_string;
+    const char* current_command = new char[128];
+    bool exists = false;
+    std::filesystem::path orig_path;
+    std::string path_to_command_string;
+    const char* path_to_command;
+
+
+    while (true) {
+        exists = false;
+        std::cout << "osshell> ";
+        std::getline(std::cin, current_command_string);
+
+        if(current_command_string == std::string("exit")) {
+            exit(0);
+        }
+
+        if (!current_command_string.empty()) {
+            orig_path = std::filesystem::current_path();
+            current_command = current_command_string.c_str();
+            i = 0;
+            while (os_path_list[i] != NULL) {
+                std::filesystem::current_path(os_path_list[i]);
+                if (std::filesystem::exists(current_command)) {
+                    std::filesystem::current_path(orig_path);
+                    path_to_command_string = std::string(os_path_list[i]) + std::string("/") + std::string(current_command);
+                    path_to_command = path_to_command_string.c_str();
+                    //std::cout << "Current file path is: " << std::filesystem::current_path();
+                    exists = true;
+                    char* argv[2];
+                    argv[0] = (char*)current_command;
+                    argv[1] = NULL;
+                    int pid = fork();
+                    if (pid == 0) {
+                        execv(path_to_command, argv);
+                    }
+                    int status;
+                    waitpid(pid, &status, 0);
+                    break;
+                } else {
+                    std::filesystem::current_path(orig_path);
+                    //try next path
+                }
+                i++;
+            }
+
+            if (exists == false) {
+                printf("%s: Error command not found\n", current_command);
+            }
+        }
+    }
+
+    /*
+    try {
+        int output = system("date");
+        if (output == 0) {
+            std::cout << std::to_string(output) << "\n";
+        } else {
+            throw "";
+        }
+    } catch(...) {
+        printf("Error command not found\n");
+    }
+    */
     // Free allocated memory
     freeArrayOfCharArrays(os_path_list, 16);
     freeArrayOfCharArrays(command_list, 32);
@@ -91,12 +159,55 @@ void freeArrayOfCharArrays(char **array, size_t array_length)
 */
 void splitString(std::string text, char d, char **result)
 {
+    enum states { NONE, IN_WORD, IN_STRING } state = NONE;
+
     int i;
     std::vector<std::string> list;
-    std::stringstream ss(text);
     std::string token;
-    
-    while (std::getline(ss, token, d))
+    for (i = 0; i < text.length(); i++)
+    {
+        char c = text[i];
+        switch (state) {
+            case NONE:
+                if (c != d)
+                {
+                    if (c == '\"')
+                    {
+                        state = IN_STRING;
+                        token = "";
+                    }
+                    else
+                    {
+                        state = IN_WORD;
+                        token = c;
+                    }
+                }
+                break;
+            case IN_WORD:
+                if (c == d)
+                {
+                    list.push_back(token);
+                    state = NONE;
+                }
+                else
+                {
+                    token += c;
+                }
+                break;
+            case IN_STRING:
+                if (c == '\"')
+                {
+                    list.push_back(token);
+                    state = NONE;
+                }
+                else
+                {
+                    token += c;
+                }
+                break;
+        }
+    }
+    if (state != NONE)
     {
         list.push_back(token);
     }
