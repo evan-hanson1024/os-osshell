@@ -107,32 +107,49 @@ int main (int argc, char **argv)
 
         if (!current_command_string.empty()) {
             orig_path = std::filesystem::current_path();
-            for (i = 0; i < os_path_list.size(); i++) {
-                std::filesystem::current_path(os_path_list[i]);
+            if (command_list_exec[0][0] == '.' || command_list_exec[0][0] == '/') {
+                //Do not check PATH variable
+                std::filesystem::current_path(orig_path);
                 if (std::filesystem::exists(command_list_exec[0])) {
-                    std::filesystem::current_path(orig_path);
-                    path_to_command_string = os_path_list[i] + std::string("/") + command_list_exec[0];
-
-                    path_to_command = path_to_command_string.c_str();
-                    //std::cout << "Current file path is: " << std::filesystem::current_path();
-                    exists = true;
                     int pid = fork();
                     if (pid == 0) {
-                        execv(path_to_command, command_list_exec);
+                        execv(command_list_exec[0], command_list_exec);
                     }
                     int status;
                     waitpid(pid, &status, 0);
                     freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
-                    break;
                 } else {
-                    std::filesystem::current_path(orig_path);
-                    //try next path
+                    printf("%s: Error command not found\n", command_list_exec[0]);
+                    freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
                 }
-            }
+            } else {
+                for (i = 0; i < os_path_list.size(); i++) {
+                    std::filesystem::current_path(os_path_list[i]);
+                    if (std::filesystem::exists(command_list_exec[0])) {
+                        std::filesystem::current_path(orig_path);
+                        path_to_command_string = os_path_list[i] + std::string("/") + command_list_exec[0];
 
-            if (exists == false) {
-                printf("%s: Error command not found\n", command_list_exec[0]);
-                freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
+                        path_to_command = path_to_command_string.c_str();
+                        //std::cout << "Current file path is: " << std::filesystem::current_path();
+                        exists = true;
+                        int pid = fork();
+                        if (pid == 0) {
+                            execv(path_to_command, command_list_exec);
+                        }
+                        int status;
+                        waitpid(pid, &status, 0);
+                        freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
+                        break;
+                    } else {
+                        std::filesystem::current_path(orig_path);
+                        //try next path
+                    }
+                }
+
+                if (exists == false) {
+                    printf("%s: Error command not found\n", command_list_exec[0]);
+                    freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
+                }
             }
         }
     }
