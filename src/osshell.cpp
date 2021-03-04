@@ -4,8 +4,10 @@
 #include <cstring>
 #include <sstream>
 #include <vector>
+#include <filesystem>
 #include <unistd.h>
 
+bool fileExecutableExists(std::string file_path);
 void splitString(std::string text, char d, std::vector<std::string>& result);
 void vectorOfStringsToArrayOfCharArrays(std::vector<std::string>& list, char ***result);
 void freeArrayOfCharArrays(char **array, size_t array_length);
@@ -17,26 +19,17 @@ int main (int argc, char **argv)
     char* os_path = getenv("PATH");
     splitString(os_path, ':', os_path_list);
 
-    
-    /************************************************************************************
-     *   Example code - remove in actual program                                        *
-     ************************************************************************************/
-    // Shows how to loop over the directories in the PATH environment variable
-    int i;
-    for (i = 0; i < os_path_list.size(); i++)
-    {
-        printf("PATH[%2d]: %s\n", i, os_path_list[i].c_str());
-    }
-    /************************************************************************************
-     *   End example code                                                               *
-     ************************************************************************************/
+    // Create list to store history
+    std::vector<std::string> history;
 
+    // Create variables for storing command user types
+    std::string user_command;               // to store command user types in
+    std::vector<std::string> command_list;  // to store `user_command` split into its variour parameters
+    char **command_list_exec;               // to store `command_list` converted to an array of character arrays
 
     // Welcome message
     printf("Welcome to OSShell! Please enter your commands ('exit' to quit).\n");
 
-    std::vector<std::string> command_list; // to store command user types in, split into its variour parameters
-    char **command_list_exec; // command_list converted to an array of character arrays
     // Repeat:
     //  Print prompt for user input: "osshell> " (no newline)
     //  Get user input for next command
@@ -47,9 +40,18 @@ int main (int argc, char **argv)
     //   If no, print error statement: "<command_name>: Error command not found" (do include newline)
 
 
+
     /************************************************************************************
      *   Example code - remove in actual program                                        *
      ************************************************************************************/
+    // Shows how to loop over the directories in the PATH environment variable
+    int i;
+    for (i = 0; i < os_path_list.size(); i++)
+    {
+        printf("PATH[%2d]: %s\n", i, os_path_list[i].c_str());
+    }
+    printf("------\n");
+    
     // Shows how to split a command and prepare for the execv() function
     std::string example_command = "ls -lh";
     splitString(example_command, ' ', command_list);
@@ -85,6 +87,19 @@ int main (int argc, char **argv)
 
 
     return 0;
+}
+
+/*
+   file_path: path to a file
+   RETURN: true/false - whether or not that file exists and is executable
+*/
+bool fileExecutableExists(std::string file_path)
+{
+    bool exists = false;
+    // check if `file_path` exists
+    // if so, ensure it is not a directory and that it has executable permissions
+
+    return exists;
 }
 
 /*
