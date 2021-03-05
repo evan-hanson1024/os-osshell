@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <filesystem>
 #include <sys/wait.h>
+#include <fstream>
+#include <vector>
+using namespace std;
 
 void splitString(std::string text, char d, std::vector<std::string>& result);
 void vectorOfStringsToArrayOfCharArrays(std::vector<std::string>& list, char ***result);
@@ -20,18 +23,7 @@ int main (int argc, char **argv)
     splitString(os_path, ':', os_path_list);
 
     
-    /************************************************************************************
-     *   Example code - remove in actual program                                        *
-     ************************************************************************************/
-    // Shows how to loop over the directories in the PATH environment variable
-    int i;
-    for (i = 0; i < os_path_list.size(); i++)
-    {
-        printf("PATH[%2d]: %s\n", i, os_path_list[i].c_str());
-    }
-    /************************************************************************************
-     *   End example code                                                               *
-     ************************************************************************************/
+   
 
 
     // Welcome message
@@ -48,43 +40,9 @@ int main (int argc, char **argv)
     //   If yes, execute it
     //   If no, print error statement: "<command_name>: Error command not found" (do include newline)
 
-    /************************************************************************************
-     *   Example code - remove in actual program                                        *
-     ************************************************************************************/
-    // Shows how to split a command and prepare for the execv() function
-    std::string example_command = "ls -lh";
-    splitString(example_command, ' ', command_list);
-    vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
-    // use `command_list_exec` in the execv() function rather than looping and printing
-    i = 0;
-    while (command_list_exec[i] != NULL)
-    {
-        printf("CMD[%2d]: %s\n", i, command_list_exec[i]);
-        i++;
-    }
-    // free memory for `command_list_exec`
-    freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
-    printf("------\n");
+    
 
-    // Second example command - reuse the `command_list` and `command_list_exec` variables
-    example_command = "echo \"Hello world\" I am alive!";
-    splitString(example_command, ' ', command_list);
-    vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
-    // use `command_list_exec` in the execv() function rather than looping and printing
-    i = 0;
-    while (command_list_exec[i] != NULL)
-    {
-        printf("CMD[%2d]: %s\n", i, command_list_exec[i]);
-        i++;
-    }
-    // free memory for `command_list_exec`
-    freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
-    printf("------\n");
-    /************************************************************************************
-     *   End example code                                                               *
-     ************************************************************************************/
-
-
+    int i;
     std::string current_command_string;
     const char* current_command;
 	
@@ -92,21 +50,108 @@ int main (int argc, char **argv)
     std::filesystem::path orig_path;
     std::string path_to_command_string;
     const char* path_to_command;
-
-
-    while (true) {
+    //open the file to save history 
+    std::fstream history;
+    history.open("history.txt");
+    string fileContent;
+    vector<string> historyVector;//create vector for history
+    while(getline(history, fileContent)){
+        historyVector.push_back(fileContent);
+    }
+    history.close();
+    
+    while (true) {//start of the constant loop
         exists = false;
         std::cout << "osshell> ";
         std::getline(std::cin, current_command_string);
         splitString(current_command_string, ' ', command_list);
         vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
-
-        if(current_command_string == std::string("exit")) {
+        
+        if(command_list_exec[0] != NULL){//checks for history that the size is under 128
+            historyVector.push_back(current_command_string);//holds history
+            if(historyVector.size() > 130){
+                historyVector.erase(historyVector.begin());
+            }
+        }
+        if(current_command_string == std::string("exit")) {//checks exit command 
+            
+            std::ofstream historyLast("history.txt");
+            for(int i = 0; i < historyVector.size(); i++){\
+                    historyLast << (historyVector.at(i)+"\n") ;
+            }
+            historyLast.close();
+            std::cout << "\n";
             exit(0);
         }
+        std::string historyStr = "history";
+        //std::cout << "the command list string 0: "<< command_list_exec[0] << std::endl;
+        std::string clearStr = "clear";
+        
+        
 
+        
+        if(command_list_exec[0] != NULL && command_list_exec[0] == historyStr){//history command start
+
+            //std::cout << "made it to here 1 " << std::endl;
+
+            if(command_list_exec[1] != NULL && command_list_exec[1] == clearStr){//this checks if the extra command is clear 
+                //clear command
+                historyVector.clear();
+                continue;
+
+            }else if(command_list_exec[1] != NULL && isdigit(command_list_exec[1][0])){//this is for digits after
+                //std::cout << "made it to here 3 " << std::endl;
+                int i;
+                bool clear = true;
+
+                for(i = 1; i < strlen(command_list_exec[1]); i++){//goes through every trailing digit to make sure its a real number 
+                    if(isdigit(command_list_exec[1][i])){
+                        //do nothing 
+                        
+                    }else{
+                        printf("%s: Error command not found. History command cannot have a character.\n", command_list_exec[0]);
+                        clear = false;
+                        break;
+                    }
+                }
+                if(clear){//if they are all numbers then it will print starting at that number
+                    
+                    
+                    int number = std::stoi(command_list_exec[1]);
+                    if(number <=0){
+                        std::cout << "Error: History expects an integer > 0 (or 'clear')" << std::endl;
+                        continue;
+                    }
+                    historyVector.pop_back();//takes off history call so it doesnt show when called
+                    if(number > historyVector.size()){//if the number is larger than 128 we dont print anything
+                        continue;
+                    }else{//if the number is less than 128 and more than 0 we print starting at the desired location 
+                        int numberStart = historyVector.size()-number;
+                        for(int i = numberStart; i < historyVector.size(); i++){
+                            std::cout <<"  " << i << ":" << historyVector.at(i)<<std::endl;
+                        }
+                    }
+                    historyVector.push_back(current_command_string);//add history command back to the log
+                }
+
+                 continue;   
+            }else if(command_list_exec[1] != NULL && !isdigit(command_list_exec[1][0])){//if the command is history but the leading digit is not a number
+                std::cout << "Error: History expects an integer > 0 (or 'clear')" << std::endl;
+                continue;
+            }
+            else{//if history is alone 
+                historyVector.pop_back();//takes off history 
+                for(int i = 0; i < historyVector.size(); i++){//prints everything in the vector 
+                    std::cout <<"  " << i << ":" << historyVector.at(i)<<std::endl;
+                }
+                //adds history back and freaks stuff up
+                historyVector.push_back(current_command_string);
+                continue;//starts the next iteration of while loop
+            }
+        
+        }
         if (!current_command_string.empty()) {
-            orig_path = std::filesystem::current_path();
+            orig_path = std::filesystem::current_path();          
             if (command_list_exec[0][0] == '.' || command_list_exec[0][0] == '/') {
                 //Do not check PATH variable
                 std::filesystem::current_path(orig_path);
@@ -122,7 +167,7 @@ int main (int argc, char **argv)
                     printf("%s: Error command not found\n", command_list_exec[0]);
                     freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
                 }
-            } else {
+            }else {
                 for (i = 0; i < os_path_list.size(); i++) {
                     std::filesystem::current_path(os_path_list[i]);
                     if (std::filesystem::exists(command_list_exec[0])) {
