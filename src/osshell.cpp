@@ -109,7 +109,7 @@ int main (int argc, char **argv)
                         //do nothing 
                         
                     }else{
-                        printf("%s: Error command not found. History command cannot have a character.\n", command_list_exec[0]);
+                        printf("Error: history expects an integer > 0 (or 'clear')\n");
                         clear = false;
                         break;
                     }
@@ -128,7 +128,7 @@ int main (int argc, char **argv)
                     }else{//if the number is less than 128 and more than 0 we print starting at the desired location 
                         int numberStart = historyVector.size()-number;
                         for(int i = numberStart; i < historyVector.size(); i++){
-                            std::cout <<"  " << i << ":" << historyVector.at(i)<<std::endl;
+                            std::cout <<"  " << i+1 << ": " << historyVector.at(i)<<std::endl;
                         }
                     }
                     historyVector.push_back(current_command_string);//add history command back to the log
@@ -142,7 +142,7 @@ int main (int argc, char **argv)
             else{//if history is alone 
                 historyVector.pop_back();//takes off history 
                 for(int i = 0; i < historyVector.size(); i++){//prints everything in the vector 
-                    std::cout <<"  " << i << ":" << historyVector.at(i)<<std::endl;
+                    std::cout <<"  " << i+1 << ": " << historyVector.at(i)<<std::endl;
                 }
                 //adds history back and freaks stuff up
                 historyVector.push_back(current_command_string);
